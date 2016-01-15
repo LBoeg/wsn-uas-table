@@ -1,4 +1,4 @@
-// Would otherwise be in the lib folder:
+// Would otherwise be in the lib folder (maybe?):
 Nodes = new Mongo.Collection("nodes");
 
 // Code shared between client and server
@@ -15,7 +15,6 @@ TabularTables.Nodes = new Tabular.Table({
     {data: "longitude", title: "Longitude"}
   ]
 });
-
 
 // Client only code
 if (Meteor.isClient) {
@@ -53,6 +52,37 @@ if (Meteor.isClient) {
       Nodes.update(selectedNode, {$set: {latitude: latitudeVar, longitude: longitudeVar} });
     	}
 	})
+
+  Meteor.startup(function() {
+    $(window).resize(function() {
+      $('#map').css('height', window.innerHeight - 82 - 45);
+    });
+    $(window).resize(); // trigger resize event
+  });
+
+  var myIcon = L.icon({
+    iconUrl: 'quadcopter.png',
+    iconSize: [38, 38],
+  });
+
+  Template.map.rendered = function() {
+    L.Icon.Default.imagePath = 'packages/bevanhunt_leaflet/images';
+
+    var map = L.map('map', {
+      doubleClickZoom: false,
+      scrollWheelZoom: false
+    }).setView([38.9875, -76.9373], 18);
+
+    L.tileLayer.provider('Thunderforest.Outdoors').addTo(map);
+
+    //map.on('click', function(event) {
+    //  Markers.insert({latlng: event.latlng});
+    //});
+
+    L.marker([38.9875, -76.9380], {icon: myIcon}).addTo(map);
+    //L.marker([38.9875, -76.9373]).addTo(map);
+  };
+
 }
 
 
@@ -82,6 +112,10 @@ if (Meteor.isServer) {
         return Nodes.remove({});
       },
 
+      removeAllMarkers: function() {
+        return Markers.remove({});
+      },
+      /*
       sendLogMessage: function() {
         console.log("Hello world");
       },
@@ -117,6 +151,7 @@ if (Meteor.isServer) {
 
         ));
       }
+      */
 
     });
 

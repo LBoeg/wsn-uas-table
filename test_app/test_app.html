@@ -11,6 +11,8 @@
     {{> RemoveNode }}
     <hr>
     {{> UpdateNode }}
+    <hr>
+    {{> map}}
     <br><br>
   </div>
 </body>
@@ -46,8 +48,8 @@
 
 <template name="UpdateNode">
      <form>
-         <fieldset>
-         	<p><b>Update an existing node:</b></p>
+      <fieldset>
+        <p><b>Update an existing node:</b></p>
     		Select Existing Node:<br>
     		<input type="text" name="node" value="Router A"><br><br>
     		New Latitude:<br>
@@ -59,3 +61,7 @@
     </form>
 </template>
 
+<template name="map">
+  <h1 class="title">Map</h1>
+    <div id="map" class="map"></div>
+</template>
