@@ -1,2 +1,2 @@
 # WSN-UAS-table
-> Optimizing Zigbee communication networks in my free time ([@LBoeng](https://github.com/LBoeg))!
+> Optimizing Zigbee communication networks in my free time ([@LBoeg](https://github.com/LBoeg))!

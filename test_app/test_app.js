@@ -19,7 +19,6 @@ TabularTables.Nodes = new Tabular.Table({
 // Client only code
 if (Meteor.isClient) {
 
-  //ISSUE: Seems to work with initial values, but throws an exception. Also, only runs on startup, NOT updating to DB changes.
   Template.Distance.helpers({
     'dist': function() {
       //Haversine distance JS code
@@ -27,18 +26,18 @@ if (Meteor.isClient) {
         return this * Math.PI / 180;
       }
 
-      //var nodelat = Nodes.find({},{fields:{node: "End Device"}}).fetch()[0].latitude;
-      //lat2 = parseFloat(nodelat);
+      var end = Nodes.findOne({node: "End Device"});
+      var cor = Nodes.findOne({node: "Coordinator"});
 
-      var lat2 = parseFloat(Nodes.find({node: "End Device"}).fetch()[0].latitude); 
-      var lon2 = parseFloat(Nodes.find({node: "End Device"}).fetch()[0].longitude); 
-      var lat1 = parseFloat(Nodes.find({node: "Coordinator"}).fetch()[0].latitude); 
-      var lon1 = parseFloat(Nodes.find({node: "Coordinator"}).fetch()[0].longitude); 
+      var lat2Str = end && end.latitude;
+      var lon2Str = end && end.longitude;
+      var lat1Str = cor && cor.latitude;
+      var lon1Str = cor && cor.longitude;
 
-      var lat2 = parseFloat("34");
-      var lon2 = parseFloat("44");
-      var lat1 = parseFloat("32");
-      var lon1 = parseFloat("58");
+      var lat2 = parseFloat(lat2Str);
+      var lon2 = parseFloat(lon2Str);
+      var lat1 = parseFloat(lat1Str);
+      var lon1 = parseFloat(lon1Str);
 
       var R = 6371; // km 
       var x1 = lat2-lat1;
@@ -149,10 +148,10 @@ if (Meteor.isServer) {
         return Nodes.remove({});
       },
 
-      removeAllMarkers: function() {
+      /*removeAllMarkers: function() {
         return Markers.remove({});
       },
-      /*
+      
       sendLogMessage: function() {
         console.log("Hello world");
       },
