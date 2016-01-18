@@ -49,8 +49,18 @@ if (Meteor.isClient) {
                       Math.sin(dLon/2) * Math.sin(dLon/2);  
       var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
       var d = R * c;
+
+      var strUnits = " km";
+
+      if (d < 1) {
+        d = d * 1000;
+        var strUnits = " meters";
+      }
       
-      return d
+      var stringD = d.toString();
+      var distance = stringD.concat(strUnits);
+
+      return distance
     }
 
   });
