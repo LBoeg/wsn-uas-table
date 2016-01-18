@@ -19,6 +19,43 @@ TabularTables.Nodes = new Tabular.Table({
 // Client only code
 if (Meteor.isClient) {
 
+  //ISSUE: Seems to work with initial values, but throws an exception. Also, only runs on startup, NOT updating to DB changes.
+  Template.Distance.helpers({
+    'dist': function() {
+      //Haversine distance JS code
+      Number.prototype.toRad = function() {
+        return this * Math.PI / 180;
+      }
+
+      //var nodelat = Nodes.find({},{fields:{node: "End Device"}}).fetch()[0].latitude;
+      //lat2 = parseFloat(nodelat);
+
+      var lat2 = parseFloat(Nodes.find({node: "End Device"}).fetch()[0].latitude); 
+      var lon2 = parseFloat(Nodes.find({node: "End Device"}).fetch()[0].longitude); 
+      var lat1 = parseFloat(Nodes.find({node: "Coordinator"}).fetch()[0].latitude); 
+      var lon1 = parseFloat(Nodes.find({node: "Coordinator"}).fetch()[0].longitude); 
+
+      var lat2 = parseFloat("34");
+      var lon2 = parseFloat("44");
+      var lat1 = parseFloat("32");
+      var lon1 = parseFloat("58");
+
+      var R = 6371; // km 
+      var x1 = lat2-lat1;
+      var dLat = x1.toRad();  
+      var x2 = lon2-lon1;
+      var dLon = x2.toRad();  
+      var a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
+                      Math.cos(lat1.toRad()) * Math.cos(lat2.toRad()) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2);  
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+      var d = R * c;
+      
+      return d
+    }
+
+  });
+
 	Template.AddNode.events({
     	'submit form': function(event){
       		event.preventDefault();
@@ -38,7 +75,7 @@ if (Meteor.isClient) {
 			event.preventDefault();
 			var nodeVar = event.target.node.value;
 			var selectedNode = Nodes.find({node: nodeVar}).fetch()[0]._id;
-      		Nodes.remove(selectedNode);
+      Nodes.remove(selectedNode);
     	}
 	})
 

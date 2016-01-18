@@ -6,6 +6,8 @@
     </div>
     {{> Nodes }}
     <hr>
+    {{> Distance }}
+    <hr>
     {{> AddNode }}
     <hr>
     {{> RemoveNode }}
@@ -20,6 +22,10 @@
 
 <template name="Nodes">
   {{> tabular table=TabularTables.Nodes class="table table-striped table-hover table-bordered table-condensed" selector=currentSelector id="Nodes" }}
+</template>
+
+<template name ="Distance">
+  <p>The distance between the Coordinator and the End Device is: {{ dist }} km.</p>
 </template>
 
 <template name="AddNode">
