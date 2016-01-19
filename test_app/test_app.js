@@ -106,7 +106,7 @@ if (Meteor.isClient) {
     $(window).resize(); // trigger resize event
   });
 
-  var myIcon = L.icon({
+  var quadIcon = L.icon({
     iconUrl: 'quadcopter.png',
     iconSize: [38, 38],
   });
@@ -119,14 +119,19 @@ if (Meteor.isClient) {
       scrollWheelZoom: false
     }).setView([38.9875, -76.9373], 18);
 
+    var markers = new L.LayerGroup().addTo(map);
     L.tileLayer.provider('Thunderforest.Outdoors').addTo(map);
 
-    //map.on('click', function(event) {
-    //  Markers.insert({latlng: event.latlng});
-    //});
+    // Move quadcopter icon based off of quadcopter lat and long
+    this.autorun(function(){
+      var cursor = Nodes.find({node: "Quadcopter"});
+      markers.clearLayers();
+      cursor.forEach(function(foo){
+        L.marker([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude], {icon: quadIcon}).addTo(markers);
+      });
+      markers.addTo(map);
+    });
 
-    L.marker([38.9875, -76.9380], {icon: myIcon}).addTo(map);
-    //L.marker([38.9875, -76.9373]).addTo(map);
   };
 
 }
