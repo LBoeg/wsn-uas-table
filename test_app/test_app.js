@@ -101,7 +101,7 @@ if (Meteor.isClient) {
 
   Meteor.startup(function() {
     $(window).resize(function() {
-      $('#map').css('height', window.innerHeight - 82 - 45);
+      $('#map').css('height', window.innerHeight - 82 - 20); //Originally: 82 - 45
     });
     $(window).resize(); // trigger resize event
   });
@@ -109,6 +109,21 @@ if (Meteor.isClient) {
   var quadIcon = L.icon({
     iconUrl: 'quadcopter.png',
     iconSize: [38, 38],
+  });
+
+  var endIcon = L.icon({
+    iconUrl: 'Letter-E-red-icon.png',
+    iconSize: [24, 24],
+  });
+  
+  var routIcon = L.icon({
+    iconUrl: 'Letter-R-grey-icon.png',
+    iconSize: [24, 24],
+  });
+
+  var corIcon = L.icon({
+    iconUrl: 'Letter-C-blue-icon.png',
+    iconSize: [24, 24],
   });
 
   Template.map.rendered = function() {
@@ -119,15 +134,28 @@ if (Meteor.isClient) {
       scrollWheelZoom: false
     }).setView([38.9875, -76.9373], 18);
 
+    //L.tileLayer.provider('Thunderforest.Outdoors').addTo(map);
+
+    googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+        maxZoom: 20,
+        subdomains:['mt0','mt1','mt2','mt3']
+    }).addTo(map);
+
     var markers = new L.LayerGroup().addTo(map);
-    L.tileLayer.provider('Thunderforest.Outdoors').addTo(map);
 
     // Move quadcopter icon based off of quadcopter lat and long
     this.autorun(function(){
       var cursor = Nodes.find({node: "Quadcopter"});
       markers.clearLayers();
       cursor.forEach(function(foo){
+        L.marker([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude], {icon: corIcon}).addTo(markers);
+        L.circle([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude], 120).addTo(markers);
         L.marker([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude], {icon: quadIcon}).addTo(markers);
+        L.marker([Nodes.findOne({node: "End Device"}).latitude, Nodes.findOne({node: "End Device"}).longitude], {icon: endIcon}).addTo(markers);
+        //Center on Quadcopter:
+        map.setView([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude]);
+        //Center on Coordinator:
+        //map.setView([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude]);
       });
       markers.addTo(map);
     });
