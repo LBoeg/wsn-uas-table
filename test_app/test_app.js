@@ -12,7 +12,8 @@ TabularTables.Nodes = new Tabular.Table({
   columns: [
     {data: "node", title: "Node"},
     {data: "latitude", title: "Latitude"},
-    {data: "longitude", title: "Longitude"}
+    {data: "longitude", title: "Longitude"},
+    {data: "altitude", title: "Altitude"}
   ]
 });
 
@@ -71,10 +72,12 @@ if (Meteor.isClient) {
       		var nodeVar = event.target.node.value;
       		var latitudeVar = event.target.latitude.value;
       		var longitudeVar = event.target.longitude.value;
+          var altitudeVar = event.target.altitude.value;
       		Nodes.insert({
         	  node: nodeVar,
         	  latitude: latitudeVar,
-        	  longitude: longitudeVar
+        	  longitude: longitudeVar,
+            altitude: altitudeVar
       		});
     	}
   	});
@@ -94,8 +97,9 @@ if (Meteor.isClient) {
 			var nodeVar = event.target.node.value;
 			var latitudeVar = event.target.latitude.value;
       var longitudeVar = event.target.longitude.value;
+      var altitudeVar = event.target.altitude.value;
 			var selectedNode = Nodes.find({node: nodeVar}).fetch()[0]._id;
-      Nodes.update(selectedNode, {$set: {latitude: latitudeVar, longitude: longitudeVar} });
+      Nodes.update(selectedNode, {$set: {latitude: latitudeVar, longitude: longitudeVar, altitude: altitudeVar} });
     	}
 	})
 
@@ -106,25 +110,14 @@ if (Meteor.isClient) {
     $(window).resize(); // trigger resize event
   });
 
-  var quadIcon = L.icon({
-    iconUrl: 'quadcopter.png',
-    iconSize: [38, 38],
-  });
-
-  var endIcon = L.icon({
-    iconUrl: 'Letter-E-red-icon.png',
-    iconSize: [24, 24],
-  });
-  
-  var routIcon = L.icon({
-    iconUrl: 'Letter-R-grey-icon.png',
-    iconSize: [24, 24],
-  });
-
-  var corIcon = L.icon({
-    iconUrl: 'Letter-C-blue-icon.png',
-    iconSize: [24, 24],
-  });
+  // Load all the custom icons
+  var quadIcon = L.icon({iconUrl: 'quad-bright-icon.png', iconSize: [38, 38]});
+  var endIcon = L.icon({iconUrl: 'Letter-E-red-icon.png', iconSize: [24, 24]});
+  var routIcon = L.icon({iconUrl: 'Letter-R-grey-icon.png', iconSize: [24, 24]});
+  var corIcon = L.icon({iconUrl: 'Letter-C-blue-icon.png', iconSize: [24, 24]});
+  var destIcon = L.icon({iconUrl: 'dest-icon.png', iconSize: [24, 24]});
+  var pyRoutIcon = L.icon({iconUrl: 'Python-icon.png', iconSize: [24, 24]});
+  var waypointIcon = L.icon({iconUrl: 'waypoint-icon.png', iconSize: [24, 24]});
 
   Template.map.rendered = function() {
     L.Icon.Default.imagePath = 'packages/bevanhunt_leaflet/images';
@@ -148,14 +141,29 @@ if (Meteor.isClient) {
       var cursor = Nodes.find({node: "Quadcopter"});
       markers.clearLayers();
       cursor.forEach(function(foo){
+        L.marker([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude], {icon: quadIcon, zIndexOffset: 100}).addTo(markers);
         L.marker([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude], {icon: corIcon}).addTo(markers);
         L.circle([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude], 120).addTo(markers);
-        L.marker([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude], {icon: quadIcon}).addTo(markers);
         L.marker([Nodes.findOne({node: "End Device"}).latitude, Nodes.findOne({node: "End Device"}).longitude], {icon: endIcon}).addTo(markers);
+        if(Nodes.findOne({node: "Destination"}).latitude != "N/A" && Nodes.findOne({node: "Destination"}).latitude != "Out of Range") {
+          L.marker([Nodes.findOne({node: "Destination"}).latitude, Nodes.findOne({node: "Destination"}).longitude], {icon: destIcon, zIndexOffset: 90}).addTo(markers);
+          //var pointA = new L.LatLng(Nodes.findOne({node: "Destination"}).latitude, Nodes.findOne({node: "Destination"}).longitude);
+          //var pointB = new L.LatLng(Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude);
+          //var path = [pointA, pointB];
+          //var line = L.polyline(path, {color: 'red', opacity: 0.3}).addTo(markers);
+        }
+        if(Nodes.findOne({node: "Waypoint"}).latitude != "N/A") {
+          L.marker([Nodes.findOne({node: "Waypoint"}).latitude, Nodes.findOne({node: "Waypoint"}).longitude], {icon: waypointIcon, zIndexOffset: 95}).addTo(markers);
+          var pointA = new L.LatLng(Nodes.findOne({node: "Waypoint"}).latitude, Nodes.findOne({node: "Waypoint"}).longitude);
+          var pointB = new L.LatLng(Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude);
+          var path = [pointA, pointB];
+          var line = L.polyline(path, {color: 'red', opacity: 0.3}).addTo(markers);
+        }
+        //L.marker([Nodes.findOne({node: "Router Python"}).latitude, Nodes.findOne({node: "Router Python"}).longitude], {icon: pyRoutIcon}).addTo(markers);
         //Center on Quadcopter:
-        map.setView([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude]);
+        //map.setView([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude]);
         //Center on Coordinator:
-        //map.setView([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude]);
+        map.setView([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude]);
       });
       markers.addTo(map);
     });
@@ -169,11 +177,12 @@ if (Meteor.isClient) {
 if (Meteor.isServer && Nodes.find().count() === 0) {
 
   var nodes = [
-    {node: "Quadcopter", latitude: "38.8792", longitude: "-76.3409"},
-    {node: "Coordinator", latitude: "38.8788", longitude: "-76.3419"},
-    {node: "End Device", latitude: "38.8721", longitude: "-76.3468"},
-    {node: "Router A", latitude: "38.8735", longitude: "-76.3465"},
-    {node: "Router B", latitude: "38.8700", longitude: "-76.3432"}
+    {node: "Quadcopter", latitude: "38.8792", longitude: "-76.3409", altitude: "0.0", flightMode: "GUIDED", battery: "11.4V"},
+    {node: "Coordinator", latitude: "38.8788", longitude: "-76.3419", altitude: "0.0"},
+    {node: "End Device", latitude: "38.8721", longitude: "-76.3468", altitude: "0.0"},
+    {node: "Router A", latitude: "38.8735", longitude: "-76.3465", altitude: "0.0"},
+    {node: "Destination", latitude: "N/A", longitude: "N/A", altitude: "N/A"},
+    {node: "Waypoint", latitude: "N/A", longitude: "N/A", altitude: "N/A"}
   ]
   _.each(nodes, function (node) {
     Nodes.insert(node);
