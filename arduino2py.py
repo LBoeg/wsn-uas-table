@@ -2,6 +2,7 @@ import serial
 import pymongo
 import time
 from math import radians, cos, sin, asin, sqrt
+from xbee import XBee,ZigBee
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -19,6 +20,9 @@ def haversine(lon1, lat1, lon2, lat2):
     r = 6371 * 1000 # Radius of earth in kilometers. Use 3956 for miles
     return c * r
 
+def atnd():
+	xbee.at(command = 'ND')
+
 # Connect to mongodb
 client = pymongo.MongoClient("127.0.0.1", 3001) 
 
@@ -26,9 +30,13 @@ client = pymongo.MongoClient("127.0.0.1", 3001)
 db = client.meteor
 nodes = db.nodes
 
-# Openign serial connection
-ser = serial.Serial('/dev/cu.usbmodem1411', 9600)
+# Opening Arduino serial connection
+#ser = serial.Serial('/dev/cu.usbmodem1411', 9600)
 #ser = serial.Serial('/dev/cu.usbmodem1421', 9600)
+
+# Opening XBee Coordinator serial connection
+xbeeSer = serial.Serial('/dev/tty.usbserial-AH01LN9S')
+xbee = ZigBee(xbeeSer, escaped=True)
 
 # Make sure the Coordinator and End Device have been found before calculating distance
 cor = 0
@@ -38,11 +46,19 @@ end = 0
 distance = 0
 
 # XBee range "danger zone" based off of experimentation
-xbeeDanger = 120
+xbeeDanger = 70
 
-# Reading from Arduino
+# Main loop
 while True:
-	line = ser.readline()
+	# Reading from Arduino
+	#line = ser.readline()
+	# Reading from XBee Coordinator instead
+	response = xbee.wait_read_frame()
+	while 'rf_data' not in str(response):
+			response = xbee.wait_read_frame()
+	line = response['rf_data']
+
+	# Parse CSV
 	words = line.split(',')
 	node = words[0]
 	lat = words[1]
@@ -63,10 +79,77 @@ while True:
     	{"$set": {"latitude": lat, "longitude": lon}}
 	)
 
+	"""
 	# Calculate distance from Coordinator to End Device
 	if cor == 1 and end == 1:
 		distance = haversine(clon, clat, elon, elat)
 		print distance
+	"""
+	
+	"""
+	# Request network mapping information
+	atnd()
+	response = xbee.wait_read_frame()	
+	#print response
+	# Also receiving tx packets
+	while 'ND' not in str(response):
+		print 'wrong packet' 
+		#print response['rf_data']
+		atnd()
+		response = xbee.wait_read_frame()
+		#print response
+
+	# Once found, print
+	nodeIdentifier = str(response['parameter']['node_identifier']).strip()
+	print nodeIdentifier
+
+	# Device type: 0=C; 1=R; 2=E
+	if hex(ord(response['parameter']['device_type'])) == '0x1':
+		print "Router"
+		nodeType = 'Router'
+	if hex(ord(response['parameter']['device_type'])) == '0x2':
+		print "End Device"
+		nodeType = 'End Device'
+	if hex(ord(response['parameter']['device_type'])) == '0x0':
+		print "Coordinator"
+		nodeType = 'Coordinator'
+	
+	# Source's MY Addr
+	nodeMYaddr = " ".join(hex(ord(n)) for n in response['parameter']['source_addr'])
+	MY = nodeMYaddr.split(" ")
+	MYhex = str(MY[0][2:]) + str(MY[1][2:])
+	print MYhex
+
+	# Source's Parent's MY Addr
+	#print " ".join(hex(ord(n)) for n in response['parameter']['parent_address']) 
+	nodeParent = " ".join(hex(ord(n)) for n in response['parameter']['parent_address'])
+	PNA = nodeParent.split(" ")
+	PNAhex = str(PNA[0][2:]) + str(PNA[1][2:])
+	if PNAhex == '00':
+		PNAhex = '0000'
+	print PNAhex
+
+	# Find mongo id
+	print nodes.find_one({"node": nodeIdentifier})['_id']
+	nodeID = nodes.find_one({"node": nodeIdentifier})['_id']
+
+	# Update Mongo
+	nodes.update_one({"_id": nodeID},
+    	{"$set": {"type": nodeType, "MY": MYhex, "PNA": PNAhex}}
+	)
+
+	# Update only every 1+1 seconds
+	time.sleep(1)
+
+	# Flush serial port for each iteration
+	xbeeSer.close()
+	time.sleep(0.1)
+	xbeeSer.open()
+	time.sleep(1.0)
+
+	"""
+
+	time.sleep(1)
 
 	"""
 	# If the distance exceeds the XBee limit, write the mission file and then write the fly-no-fly file

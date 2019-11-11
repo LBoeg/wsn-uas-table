@@ -37,7 +37,7 @@ db = client.meteor
 nodes = db.nodes
 
 # XBee comfortable range based off of experimentation
-xbeeRange = 120
+xbeeRange = 70
 
 while True:
 
@@ -63,18 +63,18 @@ while True:
 		latlong = midpoint(float(clon), float(clat), float(elon), float(elat))
 		destLat = str(latlong[0])
 		destLon = str(latlong[1])
-		destAlt = str(20.00 + float(qalt))
+		destAlt = str(10.00) # Set altitude
 
 		# Check to make sure destination is still within coverage region
 		quadDist = haversine(float(clon), float(clat), float(destLon), float(destLat))
-		if quadDist > 120:
+		if quadDist > xbeeRange:
 			#print "End Device is too far away for Quadcopter to recover"
 			# Reset the Destination node
 			nodes.update_one({"node": "Destination"},
     			{"$set": {"latitude": "Out of Range", "longitude": "Out of Range", "altitude": "Out of Range"}}
 			)			
 
-		if quadDist < 120:
+		if quadDist < xbeeRange:
 			# Update Destination
 			nodes.update_one({"node": "Destination"},
     			{"$set": {"latitude": destLat, "longitude": destLon, "altitude": destAlt}}

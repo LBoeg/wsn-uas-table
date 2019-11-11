@@ -6,6 +6,26 @@ TabularTables = {};
 
 Meteor.isClient && Template.registerHelper('TabularTables', TabularTables);
 
+
+TabularTables.Drones = new Tabular.Table({
+  name: "DroneList",
+  collection: Nodes,
+  columns: [
+    {data: "node", title: "Drone"},
+    {data: "armed", title: "Armed"},  
+    {data: "flightMode", title: "FlightMode"},  
+    {data: "battery", title: "Battery"},
+    {data: "altitude", title: "Altitude"},
+    //{data: "heading", title: "Heading"},
+    {data: "groundSpeed", title: "GroundSpeed"},
+    {data: "verticalSpeed", title: "VerticalSpeed"},
+    //{data: "roll", title: "Roll"},
+    //{data: "yaw", title: "Yaw"},
+    //{data: "pitch", title: "Pitch"},
+  ]
+});
+
+
 TabularTables.Nodes = new Tabular.Table({
   name: "NodeList",
   collection: Nodes,
@@ -19,6 +39,12 @@ TabularTables.Nodes = new Tabular.Table({
 
 // Client only code
 if (Meteor.isClient) {
+
+  Template.Drones.helpers({
+    selector: function () {
+      return {type: "Drone"};
+    }
+  });
 
   Template.Distance.helpers({
     'dist': function() {
@@ -66,6 +92,49 @@ if (Meteor.isClient) {
 
   });
 
+  Template.FlightData.helpers({
+    'flightMode': function() {
+      flightMode = String(Nodes.findOne({node: "Quadcopter"}).flightMode);
+      return flightMode
+    },
+    'battery': function() {
+      battery = String(Nodes.findOne({node: "Quadcopter"}).battery);
+      return battery
+    },
+    'altitude': function() {
+      altitude = String(Nodes.findOne({node: "Quadcopter"}).altitude);
+      return altitude
+    },
+    'armed': function() {
+      armed = String(Nodes.findOne({node: "Quadcopter"}).armed);
+      return armed
+    },
+    'groundSpeed': function() {
+      groundSpeed = String(Nodes.findOne({node: "Quadcopter"}).groundSpeed);
+      return groundSpeed
+    },
+    'verticalSpeed': function() {
+      verticalSpeed = String(Nodes.findOne({node: "Quadcopter"}).verticalSpeed);
+      return verticalSpeed
+    },
+    'roll': function() {
+      roll = String(Nodes.findOne({node: "Quadcopter"}).roll);
+      return roll
+    },
+    'pitch': function() {
+      pitch = String(Nodes.findOne({node: "Quadcopter"}).pitch);
+      return pitch
+    },
+    'yaw': function() {
+      yaw = String(Nodes.findOne({node: "Quadcopter"}).yaw);
+      return yaw
+    },
+    'heading': function() {
+      heading = String(Nodes.findOne({node: "Quadcopter"}).heading);
+      return heading
+    }
+  });
+
 	Template.AddNode.events({
     	'submit form': function(event){
       		event.preventDefault();
@@ -105,13 +174,60 @@ if (Meteor.isClient) {
 
   Meteor.startup(function() {
     $(window).resize(function() {
-      $('#map').css('height', window.innerHeight - 82 - 20); //Originally: 82 - 45
+      $('#map').css('height', window.innerHeight - 82 - 250); //Originally: 82 - 45; 82 - 20 for full screen on laptop
     });
     $(window).resize(); // trigger resize event
   });
 
+  (function() {
+    // save these original methods before they are overwritten
+    var proto_initIcon = L.Marker.prototype._initIcon;
+    var proto_setPos = L.Marker.prototype._setPos;
+
+    var oldIE = (L.DomUtil.TRANSFORM === 'msTransform');
+
+    L.Marker.addInitHook(function () {
+        this.options.rotationOrigin = this.options.rotationOrigin || 'center bottom' ;
+        this.options.rotationAngle = this.options.rotationAngle || 0;
+    });
+
+    L.Marker.include({
+        _initIcon: function() {
+            proto_initIcon.call(this);
+        },
+
+        _setPos: function (pos) {
+            proto_setPos.call(this, pos);
+
+            if(this.options.rotationAngle) {
+                this._icon.style[L.DomUtil.TRANSFORM+'Origin'] = this.options.rotationOrigin;
+
+                if(oldIE) {
+                    // for IE 9, use the 2D rotation
+                    this._icon.style[L.DomUtil.TRANSFORM] = ' rotate(' + this.options.rotationAngle + 'deg)';
+                } else {
+                    // for modern browsers, prefer the 3D accelerated version
+                    this._icon.style[L.DomUtil.TRANSFORM] += ' rotateZ(' + this.options.rotationAngle + 'deg)';
+                }
+            }
+        },
+
+        setRotationAngle: function(angle) {
+            this.options.rotationAngle = angle;
+            this.update();
+            return this;
+        },
+
+        setRotationOrigin: function(origin) {
+            this.options.rotationOrigin = origin;
+            this.update();
+            return this;
+        }
+    });
+  })();
+
   // Load all the custom icons
-  var quadIcon = L.icon({iconUrl: 'quad-bright-icon.png', iconSize: [38, 38]});
+  var quadIcon = L.icon({iconUrl: 'copter.png', iconSize: [65, 65]});
   var endIcon = L.icon({iconUrl: 'Letter-E-red-icon.png', iconSize: [24, 24]});
   var routIcon = L.icon({iconUrl: 'Letter-R-grey-icon.png', iconSize: [24, 24]});
   var corIcon = L.icon({iconUrl: 'Letter-C-blue-icon.png', iconSize: [24, 24]});
@@ -125,7 +241,7 @@ if (Meteor.isClient) {
     var map = L.map('map', {
       doubleClickZoom: false,
       scrollWheelZoom: false
-    }).setView([38.9875, -76.9373], 18);
+    }).setView([39.6373470, -76.5402335], 18);
 
     //L.tileLayer.provider('Thunderforest.Outdoors').addTo(map);
 
@@ -141,10 +257,10 @@ if (Meteor.isClient) {
       var cursor = Nodes.find({node: "Quadcopter"});
       markers.clearLayers();
       cursor.forEach(function(foo){
-        L.marker([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude], {icon: quadIcon, zIndexOffset: 100}).addTo(markers);
-        L.marker([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude], {icon: corIcon}).addTo(markers);
-        L.circle([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude], 120).addTo(markers);
+        L.marker([Nodes.findOne({node: "Quadcopter"}).latitude, Nodes.findOne({node: "Quadcopter"}).longitude], {icon: quadIcon, zIndexOffset: 100, rotationAngle: Nodes.findOne({node: "Quadcopter"}).heading, rotationOrigin: "center"}).addTo(markers);
         L.marker([Nodes.findOne({node: "End Device"}).latitude, Nodes.findOne({node: "End Device"}).longitude], {icon: endIcon}).addTo(markers);
+        L.marker([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude], {icon: corIcon}).addTo(markers);
+        L.circle([Nodes.findOne({node: "Coordinator"}).latitude, Nodes.findOne({node: "Coordinator"}).longitude], 70).addTo(markers);
         if(Nodes.findOne({node: "Destination"}).latitude != "N/A" && Nodes.findOne({node: "Destination"}).latitude != "Out of Range") {
           L.marker([Nodes.findOne({node: "Destination"}).latitude, Nodes.findOne({node: "Destination"}).longitude], {icon: destIcon, zIndexOffset: 90}).addTo(markers);
           //var pointA = new L.LatLng(Nodes.findOne({node: "Destination"}).latitude, Nodes.findOne({node: "Destination"}).longitude);
@@ -177,12 +293,12 @@ if (Meteor.isClient) {
 if (Meteor.isServer && Nodes.find().count() === 0) {
 
   var nodes = [
-    {node: "Quadcopter", latitude: "38.8792", longitude: "-76.3409", altitude: "0.0", flightMode: "GUIDED", battery: "11.4V"},
-    {node: "Coordinator", latitude: "38.8788", longitude: "-76.3419", altitude: "0.0"},
-    {node: "End Device", latitude: "38.8721", longitude: "-76.3468", altitude: "0.0"},
-    {node: "Router A", latitude: "38.8735", longitude: "-76.3465", altitude: "0.0"},
-    {node: "Destination", latitude: "N/A", longitude: "N/A", altitude: "N/A"},
-    {node: "Waypoint", latitude: "N/A", longitude: "N/A", altitude: "N/A"}
+    {node: "Quadcopter", type: "Drone", latitude: "38.8792", longitude: "-76.3409", altitude: "0.0", flightMode: "GUIDED", battery: "11.4V"},
+    {node: "Coordinator", type: "WSN", latitude: "38.8788", longitude: "-76.3419", altitude: "0.0"},
+    {node: "End Device", type: "WSN", latitude: "38.8721", longitude: "-76.3468", altitude: "0.0"},
+    {node: "Router A", type: "WSN", latitude: "38.8735", longitude: "-76.3465", altitude: "0.0"},
+    {node: "Destination", type: "Nav", latitude: "N/A", longitude: "N/A", altitude: "N/A"},
+    {node: "Waypoint", type: "Nav", latitude: "N/A", longitude: "N/A", altitude: "N/A"}
   ]
   _.each(nodes, function (node) {
     Nodes.insert(node);
